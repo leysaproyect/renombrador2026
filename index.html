@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Renombrador de PDF por CURP - CORREGIDO</title>
+    <title>Renombrador de PDF por CURP - Múltiple</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,24 +13,26 @@
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             padding: 20px;
         }
         .container {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 40px;
+            padding: 30px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 600px;
+            max-width: 700px;
             width: 100%;
+            margin: 20px 0;
         }
-        h1 { color: #333; text-align: center; margin-bottom: 10px; font-size: 2em; }
-        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 0.95em; }
+        h1 { color: #333; text-align: center; margin-bottom: 5px; font-size: 1.8em; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 25px; font-size: 0.9em; }
+        
         .upload-area {
             border: 3px dashed #667eea;
             border-radius: 15px;
-            padding: 40px;
+            padding: 30px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -38,101 +40,205 @@
         }
         .upload-area:hover { border-color: #764ba2; background: #f0f2ff; transform: translateY(-2px); }
         .upload-area.dragover { border-color: #764ba2; background: #e8ebff; transform: scale(1.02); }
-        .upload-icon { font-size: 60px; margin-bottom: 15px; color: #667eea; }
-        .upload-text { color: #555; font-size: 1.1em; margin-bottom: 10px; }
-        .upload-hint { color: #888; font-size: 0.85em; }
+        .upload-icon { font-size: 50px; margin-bottom: 10px; color: #667eea; }
+        .upload-text { color: #555; font-size: 1em; margin-bottom: 8px; }
+        .upload-hint { color: #888; font-size: 0.8em; }
+        .max-files { color: #667eea; font-weight: bold; }
         input[type="file"] { display: none; }
-        .file-info {
-            margin-top: 20px; padding: 15px; background: #e3f2fd;
-            border-radius: 10px; border-left: 4px solid #2196f3; display: none;
+        
+        .files-list { margin-top: 25px; }
+        .file-card {
+            background: #f8f9ff;
+            border: 1px solid #e0e0ff;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
         }
-        .file-info.show { display: block; }
-        .curp-display {
-            margin-top: 20px; padding: 20px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 15px; text-align: center; display: none;
+        .file-card.processing { border-left: 4px solid #2196f3; }
+        .file-card.success { border-left: 4px solid #4caf50; background: #f1f9f1; }
+        .file-card.error { border-left: 4px solid #f44336; background: #fff5f5; }
+        
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
-        .curp-display.show { display: block; }
-        .curp-label { color: #666; font-size: 0.9em; margin-bottom: 8px; }
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95em;
+            word-break: break-all;
+            flex: 1;
+            min-width: 0;
+        }
+        .file-status {
+            font-size: 0.8em;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .status-pending { background: #e0e0e0; color: #666; }
+        .status-processing { background: #bbdefb; color: #1565c0; }
+        .status-success { background: #c8e6c9; color: #2e7d32; }
+        .status-error { background: #ffcdd2; color: #c62828; }
+        
+        .curp-section {
+            margin-top: 10px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            display: none;
+        }
+        .curp-section.show { display: block; }
+        .curp-label { color: #666; font-size: 0.85em; margin-bottom: 5px; }
         .curp-value {
-            font-family: 'Courier New', monospace; font-size: 1.5em; font-weight: bold;
-            color: #333; letter-spacing: 2px; background: white;
-            padding: 10px 20px; border-radius: 8px; display: inline-block;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .download-btn {
-            margin-top: 20px; width: 100%; padding: 15px 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            letter-spacing: 1px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; border: none; border-radius: 10px;
-            font-size: 1.1em; font-weight: bold; cursor: pointer;
-            transition: all 0.3s ease; display: none;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6); }
+        .new-filename {
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #555;
+            word-break: break-all;
+            background: #f5f5f5;
+            padding: 6px 10px;
+            border-radius: 5px;
+        }
+        
+        .download-btn {
+            margin-top: 12px;
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
+        }
+        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.6); }
         .download-btn.show { display: block; }
-        .loading { display: none; text-align: center; margin-top: 20px; }
-        .loading.show { display: block; }
-        .spinner {
-            width: 50px; height: 50px; border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea; border-radius: 50%;
-            animation: spin 1s linear infinite; margin: 0 auto 15px;
+        .download-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .loading-mini {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .loading-mini.show { display: flex; }
+        .spinner-mini {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .error {
-            margin-top: 20px; padding: 15px; background: #ffebee;
-            border-left: 4px solid #f44336; border-radius: 10px;
-            color: #c62828; display: none;
+        
+        .error-msg {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #ffebee;
+            border-radius: 6px;
+            color: #c62828;
+            font-size: 0.85em;
+            display: none;
         }
-        .error.show { display: block; }
-        .success-icon { font-size: 50px; color: #4caf50; margin-bottom: 10px; }
-        .new-filename { margin-top: 10px; font-size: 0.9em; color: #555; word-break: break-all; }
-        .debug-info { 
-            margin-top: 10px; padding: 10px; background: #fff3e0; 
-            border-radius: 5px; font-size: 0.8em; color: #666; 
-            font-family: monospace; display: none;
+        .error-msg.show { display: block; }
+        
+        .debug-toggle {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .debug-toggle button {
+            background: none;
+            border: 1px solid #ccc;
+            padding: 6px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8em;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .debug-toggle button:hover { background: #f5f5f5; }
+        
+        .debug-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff3e0;
+            border-radius: 5px;
+            font-size: 0.75em;
+            color: #666;
+            font-family: monospace;
+            display: none;
+            max-height: 100px;
+            overflow-y: auto;
         }
         .debug-info.show { display: block; }
+        
+        .counter {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .counter span {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 600px) {
+            .container { padding: 20px; margin: 10px; }
+            h1 { font-size: 1.5em; }
+            .upload-area { padding: 25px 20px; }
+            .file-header { flex-direction: column; align-items: flex-start; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📄 Renombrador de PDF</h1>
-        <p class="subtitle">Extrae automáticamente el CURP y renombra tu archivo</p>
+        <p class="subtitle">Extrae automáticamente el CURP y renombra hasta <span class="max-files">10 archivos</span></p>
+        
+        <div class="counter">Archivos seleccionados: <span id="fileCounter">0</span>/10</div>
         
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📤</div>
-            <div class="upload-text">Arrastra tu PDF aquí o haz clic para seleccionar</div>
-            <div class="upload-hint">Soporta archivos PDF del IMSS y otros documentos con CURP</div>
-            <input type="file" id="fileInput" accept=".pdf">
+            <div class="upload-text">Arrastra tus PDFs aquí o haz clic para seleccionar</div>
+            <div class="upload-hint">Soporta hasta 10 archivos PDF con CURP</div>
+            <input type="file" id="fileInput" accept=".pdf" multiple>
         </div>
 
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Analizando documento...</p>
-        </div>
+        <div class="files-list" id="filesList"></div>
 
-        <div class="file-info" id="fileInfo">
-            <strong>📋 Archivo:</strong> <span id="filename"></span>
+        <div class="debug-toggle">
+            <button id="toggleDebug" onclick="toggleDebug()">🔍 Mostrar/ocultar debug</button>
         </div>
-
-        <div class="curp-display" id="curpDisplay">
-            <div class="success-icon">✅</div>
-            <div class="curp-label">CURP detectado:</div>
-            <div class="curp-value" id="curpValue"></div>
-            <div class="new-filename" id="newFilename"></div>
-        </div>
-
-        <div class="debug-info" id="debugInfo">
-            <strong>Debug:</strong> <span id="debugText"></span>
-        </div>
-
-        <button class="download-btn" id="downloadBtn">
-            ⬇️ Descargar archivo renombrado
-        </button>
-
-        <div class="error" id="error">
-            <strong>❌ Error:</strong> <span id="errorMsg"></span>
-        </div>
+        <div class="debug-info" id="globalDebug"></div>
     </div>
 
     <script>
@@ -140,26 +246,26 @@
 
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        const loading = document.getElementById('loading');
-        const fileInfo = document.getElementById('fileInfo');
-        const filename = document.getElementById('filename');
-        const curpDisplay = document.getElementById('curpDisplay');
-        const curpValue = document.getElementById('curpValue');
-        const newFilename = document.getElementById('newFilename');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const error = document.getElementById('error');
-        const errorMsg = document.getElementById('errorMsg');
-        const debugInfo = document.getElementById('debugInfo');
-        const debugText = document.getElementById('debugText');
+        const filesList = document.getElementById('filesList');
+        const fileCounter = document.getElementById('fileCounter');
+        const globalDebug = document.getElementById('globalDebug');
+        
+        const MAX_FILES = 10;
+        let processedFiles = [];
+        let debugMode = false;
 
-        let currentFile = null;
-        let extractedCURP = null;
-
-        uploadArea.addEventListener('click', () => fileInput.click());
+        // Event listeners
+        uploadArea.addEventListener('click', () => {
+            if (processedFiles.length < MAX_FILES) {
+                fileInput.click();
+            }
+        });
         
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.classList.add('dragover');
+            if (processedFiles.length < MAX_FILES) {
+                uploadArea.classList.add('dragover');
+            }
         });
 
         uploadArea.addEventListener('dragleave', () => {
@@ -169,74 +275,92 @@
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) handleFile(files[0]);
+            if (processedFiles.length >= MAX_FILES) {
+                alert(`Solo puedes procesar hasta ${MAX_FILES} archivos a la vez.`);
+                return;
+            }
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+            handleFiles(files);
         });
 
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+            const files = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
+            handleFiles(files);
+            fileInput.value = ''; // Reset input
         });
 
-        function resetUI() {
-            fileInfo.classList.remove('show');
-            curpDisplay.classList.remove('show');
-            downloadBtn.classList.remove('show');
-            error.classList.remove('show');
-            debugInfo.classList.remove('show');
-            loading.classList.remove('show');
+        function updateCounter() {
+            fileCounter.textContent = processedFiles.length;
+            if (processedFiles.length >= MAX_FILES) {
+                uploadArea.style.opacity = '0.6';
+                uploadArea.style.cursor = 'not-allowed';
+            } else {
+                uploadArea.style.opacity = '1';
+                uploadArea.style.cursor = 'pointer';
+            }
         }
 
-        function showError(msg) {
-            errorMsg.textContent = msg;
-            error.classList.add('show');
-            loading.classList.remove('show');
+        function toggleDebug() {
+            debugMode = !debugMode;
+            globalDebug.classList.toggle('show', debugMode);
+            document.querySelectorAll('.file-debug').forEach(el => {
+                el.classList.toggle('show', debugMode);
+            });
         }
 
-        async function handleFile(file) {
-            resetUI();
+        function handleFiles(files) {
+            if (files.length === 0) return;
             
-            if (file.type !== 'application/pdf') {
-                showError('Por favor selecciona un archivo PDF válido.');
-                return;
+            const availableSlots = MAX_FILES - processedFiles.length;
+            const filesToProcess = files.slice(0, availableSlots);
+            
+            if (files.length > availableSlots) {
+                alert(`Solo se procesarán ${availableSlots} archivos. Límite de ${MAX_FILES} alcanzado.`);
             }
-
-            currentFile = file;
-            filename.textContent = file.name;
-            fileInfo.classList.add('show');
-            loading.classList.add('show');
-
-            try {
-                const result = await extractCURPFromPDF(file);
-                
-                if (result.curp) {
-                    extractedCURP = result.curp;
-                    curpValue.textContent = result.curp;
-                    
-                    const extension = file.name.split('.').pop();
-                    const newName = `${result.curp}.${extension}`;
-                    newFilename.textContent = `Nuevo nombre: ${newName}`;
-                    
-                    curpDisplay.classList.add('show');
-                    downloadBtn.classList.add('show');
-                    loading.classList.remove('show');
-                    
-                    // Debug info
-                    debugText.textContent = `Texto extraído (primeros 500 chars): ${result.textPreview}`;
-                    debugInfo.classList.add('show');
-                } else {
-                    showError('No se encontró un CURP válido en el PDF. Asegúrate de que el documento contenga un CURP mexicano válido (18 caracteres).');
-                    // Mostrar debug para ayudar
-                    if (result.textPreview) {
-                        debugText.textContent = `Texto encontrado: ${result.textPreview}`;
-                        debugInfo.classList.add('show');
-                    }
-                }
-            } catch (err) {
-                showError('Error al leer el PDF: ' + err.message);
-            }
+            
+            filesToProcess.forEach(file => addFileToProcess(file));
+            updateCounter();
         }
 
-        async function extractCURPFromPDF(file) {
+        function addFileToProcess(file) {
+            const fileId = 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            
+            const fileCard = document.createElement('div');
+            fileCard.className = 'file-card processing';
+            fileCard.id = fileId;
+            fileCard.innerHTML = `
+                <div class="file-header">
+                    <div class="file-name" title="${file.name}">📄 ${file.name}</div>
+                    <span class="file-status status-processing">Procesando...</span>
+                </div>
+                <div class="loading-mini show">
+                    <div class="spinner-mini"></div>
+                    <span>Extrayendo CURP...</span>
+                </div>
+                <div class="curp-section">
+                    <div class="curp-label">✅ CURP detectado:</div>
+                    <div class="curp-value"></div>
+                    <div class="new-filename"></div>
+                </div>
+                <button class="download-btn">⬇️ Descargar renombrado</button>
+                <div class="error-msg"></div>
+                <div class="file-debug debug-info"></div>
+            `;
+            
+            filesList.appendChild(fileCard);
+            
+            // Scroll to new file
+            fileCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            // Process the file
+            processPDF(file, fileId).then(result => {
+                updateFileCard(fileId, file, result);
+            }).catch(err => {
+                handleError(fileId, err.message);
+            });
+        }
+
+        async function processPDF(file, fileId) {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             
@@ -249,62 +373,133 @@
                 fullText += pageText + ' ';
             }
 
-            // CORRECCIÓN: El patrón correcto para CURP mexicano es:
-            // 4 letras + 6 números (fecha) + 8 caracteres alfanuméricos = 18 total
+            // Patrón CURP: 4 letras + 6 números + 8 alfanuméricos = 18 caracteres
             const curpPattern = /[A-Z]{4}[0-9]{6}[A-Z0-9]{8}/g;
-            
             const matches = fullText.match(curpPattern);
             
             if (matches && matches.length > 0) {
-                // Filtrar exactamente 18 caracteres
                 const validCURPs = matches.filter(curp => curp.length === 18);
-                
                 if (validCURPs.length > 0) {
                     return {
+                        success: true,
                         curp: validCURPs[0],
-                        textPreview: fullText.substring(0, 500).replace(/\s+/g, ' ')
+                        textPreview: fullText.substring(0, 300).replace(/\s+/g, ' ').trim()
                     };
                 }
             }
 
-            // Búsqueda alternativa: buscar secuencias de 18+ caracteres y extraer
+            // Búsqueda alternativa en secuencias largas
             const longMatches = fullText.match(/[A-Z0-9]{18,}/g);
             if (longMatches) {
                 for (let seq of longMatches) {
                     const potential = seq.substring(0, 18);
-                    // Validar que tenga el patrón correcto: 4 letras + 6 números
                     if (/^[A-Z]{4}[0-9]{6}/.test(potential)) {
                         return {
+                            success: true,
                             curp: potential,
-                            textPreview: fullText.substring(0, 500).replace(/\s+/g, ' ')
+                            textPreview: fullText.substring(0, 300).replace(/\s+/g, ' ').trim()
                         };
                     }
                 }
             }
 
-            // Búsqueda por etiqueta CURP
+            // Búsqueda por etiqueta "CURP:"
             const altPattern = /CURP[:\s]+([A-Z0-9]{18})/i;
             const altMatch = fullText.match(altPattern);
             if (altMatch && altMatch[1]) {
                 return {
+                    success: true,
                     curp: altMatch[1],
-                    textPreview: fullText.substring(0, 500).replace(/\s+/g, ' ')
+                    textPreview: fullText.substring(0, 300).replace(/\s+/g, ' ').trim()
                 };
             }
 
             return {
+                success: false,
                 curp: null,
-                textPreview: fullText.substring(0, 500).replace(/\s+/g, ' ')
+                textPreview: fullText.substring(0, 300).replace(/\s+/g, ' ').trim(),
+                error: 'No se encontró un CURP válido (18 caracteres: 4 letras + 6 números + 8 alfanuméricos)'
             };
         }
 
-        downloadBtn.addEventListener('click', () => {
-            if (!currentFile || !extractedCURP) return;
+        function updateFileCard(fileId, file, result) {
+            const card = document.getElementById(fileId);
+            if (!card) return;
+            
+            const statusEl = card.querySelector('.file-status');
+            const loadingEl = card.querySelector('.loading-mini');
+            const curpSection = card.querySelector('.curp-section');
+            const curpValue = card.querySelector('.curp-value');
+            const newFilename = card.querySelector('.new-filename');
+            const downloadBtn = card.querySelector('.download-btn');
+            const errorMsg = card.querySelector('.error-msg');
+            const debugEl = card.querySelector('.file-debug');
+            
+            loadingEl.classList.remove('show');
+            
+            if (result.success && result.curp) {
+                // Éxito
+                card.classList.remove('processing', 'error');
+                card.classList.add('success');
+                statusEl.textContent = '✅ Listo';
+                statusEl.className = 'file-status status-success';
+                
+                curpValue.textContent = result.curp;
+                const extension = file.name.split('.').pop();
+                const newName = `${result.curp}.${extension}`;
+                newFilename.textContent = `📁 ${newName}`;
+                
+                curpSection.classList.add('show');
+                downloadBtn.classList.add('show');
+                
+                // Configurar botón de descarga
+                downloadBtn.onclick = () => downloadFile(file, result.curp);
+                
+                if (debugMode) {
+                    debugEl.textContent = `Texto extraído: ${result.textPreview}...`;
+                    debugEl.classList.add('show');
+                }
+                
+                // Guardar referencia
+                processedFiles.push({ id: fileId, file, curp: result.curp });
+                
+            } else {
+                // Error
+                card.classList.remove('processing', 'success');
+                card.classList.add('error');
+                statusEl.textContent = '❌ Error';
+                statusEl.className = 'file-status status-error';
+                errorMsg.textContent = result.error || 'Error al procesar el archivo';
+                errorMsg.classList.add('show');
+                
+                if (debugMode && result.textPreview) {
+                    debugEl.textContent = `Texto encontrado: ${result.textPreview}...`;
+                    debugEl.classList.add('show');
+                }
+                if (globalDebug.classList.contains('show')) {
+                    globalDebug.textContent += `\n[${file.name}] ${result.error || 'Error desconocido'}`;
+                }
+            }
+        }
 
-            const extension = currentFile.name.split('.').pop();
-            const newName = `${extractedCURP}.${extension}`;
+        function handleError(fileId, message) {
+            const card = document.getElementById(fileId);
+            if (!card) return;
+            
+            card.classList.remove('processing', 'success');
+            card.classList.add('error');
+            card.querySelector('.file-status').textContent = '❌ Error';
+            card.querySelector('.file-status').className = 'file-status status-error';
+            card.querySelector('.loading-mini').classList.remove('show');
+            card.querySelector('.error-msg').textContent = message;
+            card.querySelector('.error-msg').classList.add('show');
+        }
 
-            const url = URL.createObjectURL(currentFile);
+        function downloadFile(file, curp) {
+            const extension = file.name.split('.').pop();
+            const newName = `${curp}.${extension}`;
+            
+            const url = URL.createObjectURL(file);
             const a = document.createElement('a');
             a.href = url;
             a.download = newName;
@@ -312,15 +507,37 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
-            downloadBtn.textContent = '✅ Descargado!';
-            downloadBtn.style.background = 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)';
+            
+            // Feedback visual
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✅ ¡Descargado!';
+            btn.style.background = 'linear-gradient(135deg, #4caf50 0%, #45a049 100%)';
+            btn.disabled = true;
             
             setTimeout(() => {
-                downloadBtn.textContent = '⬇️ Descargar archivo renombrado';
-                downloadBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                btn.innerHTML = originalText;
+                btn.style.background = '';
+                btn.disabled = false;
             }, 2000);
-        });
+        }
+
+        function removeFile(fileId) {
+            const card = document.getElementById(fileId);
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'translateX(-20px)';
+                setTimeout(() => {
+                    card.remove();
+                    processedFiles = processedFiles.filter(f => f.id !== fileId);
+                    updateCounter();
+                }, 300);
+            }
+        }
+
+        // Inicializar
+        updateCounter();
     </script>
 </body>
 </html>
+
